@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090b10">
+<title>UAISTIS AI TERMINAL — Prototype</title>
+<style>
+:root{--bg:#080a0f;--panel:#11151e;--panel2:#171c27;--line:#252c39;--muted:#8f9aaa;--txt:#eef2f8;--accent:#b9a6ff;--green:#35d39a;--red:#ff647c;--amber:#ffc66d;--blue:#7eb8ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#202039 0,#090b10 48%);color:var(--txt);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+button,select,input{font:inherit;color:inherit}button{cursor:pointer}.app{max-width:1500px;margin:auto;padding:18px}.top{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 4px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}.brand{display:flex;gap:12px;align-items:center}.logo{width:44px;height:44px;border:1px solid #62558d;border-radius:14px;display:grid;place-items:center;color:var(--accent);font-size:22px;box-shadow:0 0 24px #a58aff20}.brand strong{font-size:17px;letter-spacing:2px}.brand small{display:block;color:var(--muted);letter-spacing:3px;font-size:10px}.topright{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pill,.btn,.select{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px}.pill{color:var(--muted);font-size:12px}.btn.primary{background:#d8d0ff;color:#11101a;border-color:#d8d0ff;font-weight:700}.btn:hover{border-color:var(--accent)}.status{display:inline-flex;gap:7px;align-items:center}.dot{width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block}.notice{margin:14px 0;padding:10px 13px;border:1px solid #69532d;background:#241d12;color:#f3d8a8;border-radius:12px;font-size:12px}
+.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;margin-top:16px}.side,.panel{background:linear-gradient(160deg,#141923,#0f131b);border:1px solid var(--line);border-radius:16px}.side{padding:12px;height:max-content;position:sticky;top:10px}.side h4{color:var(--muted);font-size:10px;letter-spacing:2px;margin:14px 10px 8px}.nav{width:100%;text-align:left;border:0;background:transparent;color:#b8c1cf;padding:10px;border-radius:10px;margin:2px 0}.nav.active,.nav:hover{background:#29243b;color:#fff}.nav span{display:inline-block;width:24px;color:var(--accent)}main{min-width:0}.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin:2px 0 14px}.hero h1{font-size:23px;margin:0 0 3px}.sub{color:var(--muted);font-size:12px}.controls{display:flex;gap:8px;flex-wrap:wrap}.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px}.panel{padding:14px;min-width:0}.span12{grid-column:span 12}.span8{grid-column:span 8}.span7{grid-column:span 7}.span6{grid-column:span 6}.span5{grid-column:span 5}.span4{grid-column:span 4}.panelhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}.panelhead h3{font-size:13px;margin:0;letter-spacing:.4px}.tag{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:4px 8px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.metric{background:var(--panel2);padding:11px;border-radius:12px;border:1px solid #242b38}.metric label{display:block;color:var(--muted);font-size:10px}.metric b{display:block;font-size:18px;margin-top:4px}.positive{color:var(--green)}.negative{color:var(--red)}.charttools{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.chip{padding:6px 9px;border:1px solid var(--line);background:#171c27;border-radius:8px;color:#bdc6d4;font-size:11px}.chip.on{border-color:#7764aa;color:#e2d9ff;background:#29223b}.chartwrap{height:310px;background:#090d14;border:1px solid #252d3a;border-radius:12px;overflow:hidden;position:relative}.chartwrap canvas{width:100%;height:100%;display:block}.chartfoot{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:10px;margin-top:8px;flex-wrap:wrap}.listrow{display:flex;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #252b36}.listrow:last-child{border:0}.muted{color:var(--muted)}.big{font-size:21px;font-weight:700}.bar{height:6px;background:#262d3a;border-radius:10px;overflow:hidden;margin-top:7px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#8c7aff,#54d6bd);width:68%}.field{display:flex;flex-direction:column;gap:5px;margin:8px 0}.field label{font-size:11px;color:var(--muted)}.field input,.field select{width:100%;background:#0b1018;border:1px solid var(--line);border-radius:9px;padding:9px}.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.result{background:#0b1118;border:1px solid #2b3442;border-radius:10px;padding:10px;margin-top:9px}.result strong{font-size:18px}.session{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}.session:last-child{border:0}.badge{font-size:10px;border-radius:20px;padding:3px 7px;background:#202938;color:#b8c9df}.badge.live{background:#12372d;color:#7ce6bd}.ai{border-left:3px solid var(--accent);padding:10px 12px;background:#1b1930;border-radius:0 10px 10px 0;color:#ded8f4}.footer{color:#6f7a8b;text-align:center;font-size:10px;padding:18px}.mobilebar{display:none}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.side{position:static;display:flex;overflow:auto;gap:4px}.side h4{display:none}.nav{white-space:nowrap;width:auto}.span8,.span7,.span6,.span5,.span4{grid-column:span 12}.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.app{padding:10px}.brand strong{font-size:14px}.hero h1{font-size:20px}.chartwrap{height:250px}.metrics{gap:7px}.metric b{font-size:16px}.topright{width:100%}.topright>*{flex:1}.controls>*{flex:1}.side{border-radius:12px}.nav{padding:8px}.panel{padding:11px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top">
+ <div class="brand"><div class="logo">✧</div><div><strong>UAISTIS AI TERMINAL</strong><small>UNIVERSAL MARKET INTELLIGENCE</small></div></div>
+ <div class="topright"><span class="pill status"><i class="dot"></i> DEMO DATA · NOT LIVE</span><button class="btn" id="langBtn">தமிழ் / EN</button><button class="btn">⚙ Settings</button></div>
+</header>
+<div class="notice">⚠ Prototype preview: chart values and signals are simulated sample data. No broker is connected, no live market feed is active, and no orders can be placed.</div>
+<div class="layout">
+<aside class="side">
+ <h4>WORKSPACE</h4>
+ <button class="nav active" data-target="overview"><span>⌂</span> Overview</button>
+ <button class="nav" data-target="chart"><span>▥</span> Pro Chart</button>
+ <button class="nav" data-target="analysis"><span>✧</span> AI Analysis</button>
+ <button class="nav" data-target="scanner"><span>⌕</span> Market Scanner</button>
+ <h4>TOOLS</h4>
+ <button class="nav" data-target="risk"><span>◈</span> Risk Calculator</button>
+ <button class="nav" data-target="sessions"><span>◷</span> Market Sessions</button>
+ <button class="nav" data-target="replay"><span>↶</span> Replay & Backtest</button>
+ <button class="nav" data-target="journal"><span>▤</span> Trade Journal</button>
+</aside>
+<main>
+ <section class="hero" id="overview">
+  <div><h1 data-en="Market Command Center" data-ta="சந்தை கட்டுப்பாட்டு மையம்">Market Command Center</h1><div class="sub">One workspace · Multi-market · Broker independent</div></div>
+  <div class="controls"><select class="select" id="market"><option>Forex</option><option>MCX</option><option>NSE / BSE</option><option>Crypto</option><option>US Markets</option><option>Commodities</option></select><select class="select" id="symbol"><option>XAUUSD</option><option>EURUSD</option><option>BTCUSDT</option><option>NIFTY</option><option>GOLD</option><option>CRUDEOIL</option></select></div>
+ </section>
+ <div class="metrics">
+  <div class="metric"><label>MARKET BIAS / சந்தை திசை</label><b class="positive">BULLISH ↗</b></div>
+  <div class="metric"><label>CONFLUENCE SCORE</label><b>72 / 100</b></div>
+  <div class="metric"><label>VOLATILITY / ஏற்ற இறக்கம்</label><b>MODERATE</b></div>
+  <div class="metric"><label>DATA STATUS</label><b class="negative" style="font-size:14px">DEMO ONLY</b></div>
+ </div>
+ <div class="grid" style="margin-top:12px">
+  <section class="panel span8" id="chart">
+   <div class="panelhead"><h3>▥ PRO CHART · PROFESSIONAL VIEW</h3><span class="tag">SIMULATED</span></div>
+   <div class="charttools"><button class="chip on">Candles</button><button class="chip">Heikin Ashi</button><button class="chip">1m</button><button class="chip on">5m</button><button class="chip">15m</button><button class="chip">1H</button><button class="chip">4H</button><button class="chip">1D</button><button class="chip">＋ Indicators</button><button class="chip">Drawing Tools</button></div>
+   <div class="chartwrap"><canvas id="chartCanvas"></canvas></div>
+   <div class="chartfoot"><span>EMA 9 · EMA 21 · VWAP · FVG (illustrative)</span><span>OHLC sample · Replay disabled in demo</span></div>
+  </section>
+  <section class="panel span4" id="analysis">
+   <div class="panelhead"><h3>✧ UAISTIS AI MARKET BRAIN</h3><span class="tag">RULE DEMO</span></div>
+   <div class="listrow"><span class="muted">Structure</span><b class="positive">Bullish BOS</b></div>
+   <div class="listrow"><span class="muted">Liquidity</span><b>Buy-side nearby</b></div>
+   <div class="listrow"><span class="muted">FVG</span><b>Unconfirmed</b></div>
+   <div class="listrow"><span class="muted">Order Flow</span><b class="negative">No feed</b></div>
+   <div class="listrow"><span class="muted">Session</span><b>London / NY</b></div>
+   <div class="ai" style="margin-top:12px"><b>AI விளக்கம் / AI Insight</b><br><span class="muted">Sample only: structure looks bullish in this mock-up. Confirm with real price, volume and session data before considering any setup.</span></div>
+   <div class="bar"><i></i></div><div class="chartfoot"><span>Confluence score (demo)</span><b>72%</b></div>
+  </section>
+  <section class="panel span7" id="scanner">
+   <div class="panelhead"><h3>⌕ MULTI-MARKET SCANNER</h3><span class="tag">WATCHLIST SAMPLE</span></div>
+   <div class="listrow"><b>XAUUSD</b><span>Gold · Forex</span><b class="positive">Bullish</b></div>
+   <div class="listrow"><b>EURUSD</b><span>Major FX</span><b>Neutral</b></div>
+   <div class="listrow"><b>BTCUSDT</b><span>Crypto</span><b class="negative">Bearish</b></div>
+   <div class="listrow"><b>NIFTY</b><span>India Index</span><b>Neutral</b></div>
+   <div class="listrow"><b>MCX GOLD</b><span>Commodity</span><b class="positive">Bullish</b></div>
+  </section>
+  <section class="panel span5" id="risk">
+   <div class="panelhead"><h3>◈ RISK & POSITION CALCULATOR</h3><span class="tag">LOCAL CALCULATION</span></div>
+   <div class="two"><div class="field"><label>Account Balance</label><input id="balance" type="number" value="10000"></div><div class="field"><label>Risk %</label><input id="riskpct" type="number" value="1" step=".1"></div></div>
+   <div class="two"><div class="field"><label>Entry Price</label><input id="entry" type="number" value="2350"></div><div class="field"><label>Stop Loss</label><input id="sl" type="number" value="2345"></div></div>
+   <button class="btn primary" id="calc">Calculate Risk</button>
+   <div class="result"><span class="muted">Risk Amount / ஆபத்து தொகை</span><br><strong id="riskout">100.00</strong><div class="chartfoot">Price distance: <b id="distout">5.00</b></div></div>
+   <div class="sub">Lot size requires instrument contract specifications and account currency; not estimated here.</div>
+  </section>
+  <section class="panel span4" id="sessions">
+   <div class="panelhead"><h3>◷ GLOBAL MARKET SESSIONS</h3><span class="tag">UTC REFERENCE</span></div>
+   <div class="session"><span>Asia / Tokyo</span><span class="badge">00:00–09:00</span></div>
+   <div class="session"><span>London</span><span class="badge">07:00–16:00</span></div>
+   <div class="session"><span>New York</span><span class="badge">13:00–22:00</span></div>
+   <p class="sub">Session times are illustrative UTC windows; daylight-saving and exchange-specific hours must be applied in production.</p>
+  </section>
+  <section class="panel span4" id="replay">
+   <div class="panelhead"><h3>↶ REPLAY & BACKTEST LAB</h3><span class="tag">PLANNED ENGINE</span></div>
+   <div class="big">Historical Replay</div><p class="sub">Step-by-step candles, speed control, strategy rules and trade-by-trade review.</p>
+   <div class="charttools"><button class="chip">◀ Step</button><button class="chip">▶ Play</button><button class="chip">1×</button><button class="chip">10×</button></div>
+   <div class="sub">Prototype controls are visual only; no historical feed loaded.</div>
+  </section>
+  <section class="panel span4" id="journal">
+   <div class="panelhead"><h3>▤ TRADE JOURNAL</h3><span class="tag">LOCAL DEMO</span></div>
+   <div class="listrow"><span class="muted">Trade notes</span><b>Ready</b></div>
+   <div class="listrow"><span class="muted">Screenshot tagging</span><b>Planned</b></div>
+   <div class="listrow"><span class="muted">AI review</span><b>Planned</b></div>
+   <div class="sub">Store entries, setups, emotions, rules followed and post-trade reviews in a future persistent database.</div>
+  </section>
+  <section class="panel span12">
+   <div class="panelhead"><h3>∞ INFINITY VISION-INSPIRED TOOLKIT · UAISTIS EXPANSION</h3><span class="tag">ROADMAP</span></div>
+   <div class="grid">
+    <div class="span4"><b>Forex calculators</b><p class="sub">Pip value · Lot size · Margin · Swap · Position sizing</p></div>
+    <div class="span4"><b>Institutional order flow</b><p class="sub">Footprint · Delta · CVD · DOM · Liquidity Heatmap</p></div>
+    <div class="span4"><b>UAISTIS intelligence</b><p class="sub">ICT / SMC · BOS / CHOCH · FVG · FRVP · CO2</p></div>
+   </div>
+  </section>
+ </div>
+</main>
+</div>
+<div class="footer">UAISTIS AI TERMINAL · UI PROTOTYPE v1 · Broker independent design · Live data and execution not connected</div>
+</div>
+<script>
+const canvas=document.getElementById('chartCanvas'),ctx=canvas.getContext('2d');
+function draw(){const r=canvas.getBoundingClientRect(),dpr=devicePixelRatio||1;canvas.width=r.width*dpr;canvas.height=r.height*dpr;ctx.scale(dpr,dpr);let w=r.width,h=r.height;
+ctx.fillStyle='#090d14';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#202938';ctx.lineWidth=1;
+for(let i=1;i<6;i++){let y=i*h/6;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}
+for(let i=1;i<9;i++){let x=i*w/9;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke()}
+let p=h*.68;for(let i=0;i<54;i++){let x=16+i*(w-32)/54,delta=(Math.sin(i*.72)*8+Math.cos(i*.24)*5+(i>28?2:-1));let o=p;p-=delta;p=Math.max(30,Math.min(h-35,p));let close=p,high=Math.min(o,close)-Math.random()*7,low=Math.max(o,close)+Math.random()*7;let up=close<o;ctx.strokeStyle=up?'#35d39a':'#ff647c';ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(x,o);ctx.lineTo(x,close);ctx.stroke();ctx.fillRect(x-3,Math.min(o,close),6,Math.max(3,Math.abs(o-close)));ctx.beginPath();ctx.moveTo(x,high);ctx.lineTo(x,low);ctx.stroke()}
+ctx.strokeStyle='#a995ff';ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(0,h*.38);ctx.lineTo(w,h*.32);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#a995ff';ctx.font='11px sans-serif';ctx.fillText('Illustrative price path',12,18);ctx.fillStyle='#8793a5';ctx.fillText('SAMPLE DATA',w-92,h-12)}
+window.addEventListener('resize',draw);draw();
+document.getElementById('calc').onclick=()=>{let b=+balance.value||0,p=+riskpct.value||0,e=+entry.value||0,s=+sl.value||0;riskout.textContent=(b*p/100).toFixed(2);distout.textContent=Math.abs(e-s).toFixed(4)};
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));b.classList.add('active');let el=document.getElementById(b.dataset.target);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})});
+let tamil=false;document.getElementById('langBtn').onclick=()=>{tamil=!tamil;document.querySelectorAll('[data-en]').forEach(el=>el.textContent=tamil?el.dataset.ta:el.dataset.en);document.getElementById('langBtn').textContent=tamil?'English / தமிழ்':'தமிழ் / EN'};
+</script>
+</body></html>
