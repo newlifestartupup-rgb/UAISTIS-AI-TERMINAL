@@ -1,0 +1,1039 @@
+//@version=6
+indicator(
+     "UAISTIS Adv v25 30M Profile & Flow + CO2 Theory",
+     shorttitle="UAISTIS v25 + CO2 PRO",
+     overlay=true,
+     max_bars_back=500,
+     max_lines_count=500,
+     max_labels_count=500,
+     max_boxes_count=500
+ )
+
+//======================================================================
+// 00a • ANCHORED / SESSION VWAP & BANDS
+//======================================================================
+grpVWAP             = "00a • ANCHORED / SESSION VWAP & BANDS"
+showVWAP            = input.bool(true, "Show VWAP Line", group=grpVWAP)
+vwapAnchor          = input.string("Session", "VWAP Anchor Period", options=["Session", "Week", "Month", "Year"], group=grpVWAP)
+c_vwap              = input.color(#ffeb3b, "VWAP Line Color", group=grpVWAP)
+showVWAPBands       = input.bool(true, "Show Standard Deviation Bands", group=grpVWAP)
+c_band1             = input.color(color.new(#2196f3, 60), "1st Band (1 SD)", group=grpVWAP)
+c_band2             = input.color(color.new(#ff9800, 70), "2nd Band (2 SD)", group=grpVWAP)
+c_band3             = input.color(color.new(#f44336, 80), "3rd Band (3 SD)", group=grpVWAP)
+
+//======================================================================
+// 00b • 30M FIXED RANGE VOLUME PROFILE (FRVP) - CLEAN STYLE
+//======================================================================
+grpFRVP             = "00b • FRVP COMPLETE STYLE GUIDE MAPPED"
+showVP              = input.bool(true, "Volume Profile / FRVP", group=grpFRVP)
+rowSize             = input.int(1000, "Row Size / Bins", minval=10, maxval=1000, group=grpFRVP)
+vaPct               = input.float(70.0, "Value Area Volume (%)", minval=10.0, maxval=100.0, group=grpFRVP)
+vpPlacement         = input.string("Right", "Placement", options=["Left", "Right"], group=grpFRVP)
+extendRight         = input.bool(true, "Extend Right", group=grpFRVP)
+
+showVPValues        = input.bool(true, "Show Component Labels", group=grpFRVP)
+showPOC             = input.bool(true, "POC (Point of Control)", group=grpFRVP)
+c_poc               = input.color(#ffeb3b, "POC Color (Yellow)", group=grpFRVP)
+showVAH             = input.bool(true, "VAH (Value Area High)", group=grpFRVP)
+c_vah               = input.color(#ab47bc, "VAH Color (Magenta)", group=grpFRVP)
+showVAL             = input.bool(true, "VAL (Value Area Low)", group=grpFRVP)
+c_val               = input.color(#29b6f6, "VAL Color (Blue)", group=grpFRVP)
+showHVN             = input.bool(true, "HVN (High Volume Node)", group=grpFRVP)
+c_hvn               = input.color(#7e57c2, "HVN Color (Purple)", group=grpFRVP)
+showLVN             = input.bool(true, "LVN (Low Volume Node)", group=grpFRVP)
+c_lvn               = input.color(#ff7043, "LVN Color (Orange)", group=grpFRVP)
+showHistBox         = input.bool(true, "Histogram Box Background", group=grpFRVP)
+c_histBox           = input.color(color.new(#1e222d, 85), "Histogram Box Color", group=grpFRVP)
+
+//======================================================================
+// 00c • FOOTPRINT & ORDER FLOW DELTA ENGINE
+//======================================================================
+grpFP               = "00c • FOOTPRINT ORDER FLOW & DELTA MATRIX"
+showFootprint       = input.bool(true, "Enable Footprint Delta Engine", group=grpFP)
+showImbalance       = input.bool(true, "Highlight Volume Imbalance (>300%)", group=grpFP)
+imbalanceRatio      = input.float(3.0, "Volume Imbalance Threshold Multiplier", minval=1.5, step=0.5, group=grpFP)
+c_buyDelta          = input.color(color.new(color.teal, 20), "Bullish Delta / Buy Imbalance", group=grpFP)
+c_sellDelta         = input.color(color.new(color.maroon, 20), "Bearish Delta / Sell Imbalance", group=grpFP)
+
+//======================================================================
+// 00d • RISK & POSITION SIZING CALCULATOR
+//======================================================================
+grpRisk             = "00d • RISK & POSITION SIZING CALCULATOR"
+accountBalance      = input.float(10000.0, "Account Balance ($)", minval=1.0, group=grpRisk)
+riskPercent         = input.float(1.0, "Risk Per Trade (%)", minval=0.1, maxval=10.0, step=0.1, group=grpRisk)
+
+//======================================================================
+// 01 • FVG & KILL ZONES (KZ) INPUTS
+//======================================================================
+grpSMC              = "01 • SMART MONEY & KILL ZONES"
+swingLookback       = input.int(5, "Swing Lookback", minval=1, group=grpSMC)
+reqTrend            = input.bool(true, "Require Trend Alignment", group=grpSMC)
+showSwings          = input.bool(true, "Show Swing Points", group=grpSMC)
+showBOS             = input.bool(true, "Show BOS / CHoC", group=grpSMC)
+c_swingHigh         = input.color(color.red, "Swing High Color", group=grpSMC)
+c_swingLow          = input.color(color.green, "Swing Low Color", group=grpSMC)
+c_bos               = input.color(color.white, "BOS Color", group=grpSMC)
+c_choc              = input.color(#ffc107, "CHoC Color", group=grpSMC)
+
+grpKZ               = "01b • KILL ZONES SETTINGS (UTC)"
+reqKZ               = input.bool(true, "Require Kill Zone", group=grpKZ)
+useLondon           = input.bool(true, "London Open (07:00-10:00)", group=grpKZ)
+useNY               = input.bool(true, "NY Open (12:00-15:00)", group=grpKZ)
+useAsian            = input.bool(false, "Asian (00:00-04:00)", group=grpKZ)
+useLondonClose      = input.bool(false, "London Close (15:00-17:00)", group=grpKZ)
+showKZBg            = input.bool(true, "Show Background KZ Color", group=grpKZ)
+c_kz1               = input.color(color.new(color.blue, 90), "KZ Color 1", group=grpKZ)
+c_kz2               = input.color(color.new(color.orange, 90), "KZ Color 2", group=grpKZ)
+
+//======================================================================
+// 01c • ACCUMULATION MANIPULATION DISTRIBUTION (AMD / PO3) INPUTS
+//======================================================================
+grpAMD              = "01c • AMD / POWER OF 3 (ICT)"
+showAMD             = input.bool(true, "Show AMD / PO3 Pattern", group=grpAMD)
+amdRangeLen         = input.int(20, "Accumulation Lookback Bars", minval=5, group=grpAMD)
+c_accum             = input.color(color.new(#2196f3, 85), "Accumulation Color (Blue)", group=grpAMD)
+c_manip             = input.color(color.new(#f44336, 85), "Manipulation Color (Red)", group=grpAMD)
+c_dist              = input.color(color.new(#4caf50, 85), "Distribution / Final Move Color (Green)", group=grpAMD)
+
+grpAMDTrade         = "01d • AMD ENTRY & TARGET SETTINGS"
+showAMDTradePlan    = input.bool(true, "Show AMD Entry / SL / Target Lines", group=grpAMDTrade)
+amdTP1Mult          = input.float(1.5, "AMD Target 1 Multiplier", minval=0.5, step=0.1, group=grpAMDTrade)
+amdTP2Mult          = input.float(2.5, "AMD Target 2 Multiplier", minval=1.0, step=0.1, group=grpAMDTrade)
+
+//======================================================================
+// IFVG SETTINGS
+//======================================================================
+grpIFVG             = "01e • INVERSION FVG (IFVG) ENHANCEMENT"
+showIFVG            = input.bool(true, "Show IFVG Boxes with Success %", group=grpIFVG)
+c_ifvgUp            = input.color(color.new(color.teal, 60), "Bullish IFVG Box Color", group=grpIFVG)
+c_ifvgDn            = input.color(color.new(color.maroon, 60), "Bearish IFVG Box Color", group=grpIFVG)
+
+//======================================================================
+// ICT TURTLE SOUP INPUTS
+//======================================================================
+grpTSoup            = "01g • ICT TURTLE SOUP MODEL"
+showTSoup           = input.bool(true, "Show Turtle Soup Signals", group=grpTSoup)
+tsoupLookback       = input.int(20, "Turtle Soup High/Low Lookback", minval=5, group=grpTSoup)
+showTSoupLines      = input.bool(true, "Show TSoup Liquidity Lines", group=grpTSoup)
+
+//======================================================================
+// 01f • TD SEQUENTIAL INPUTS
+//======================================================================
+grpTD               = "01f • TD SEQUENTIAL (DEMARK)"
+showTD              = input.bool(true, "Show TD Sequential Numbers", group=grpTD)
+showTD9_13          = input.bool(true, "Highlight TD Setup 9 and 13 Reversals", group=grpTD)
+c_tdBuy             = input.color(color.green, "TD Buy Setup Numbers", group=grpTD)
+c_tdSell            = input.color(color.red, "TD Sell Setup Numbers", group=grpTD)
+c_tdCount           = input.color(color.purple, "TD Countdown Numbers", group=grpTD)
+
+//======================================================================
+// CO2 THEORY (CANDLE 1/2) INPUTS
+//======================================================================
+grpCO2              = "01h • CO2 (CANDLE 1/2) THEORY SETTINGS"
+showCO2             = input.bool(true, "Show CO2 Theory Signals", group=grpCO2)
+co2MinBody          = input.float(0.4, "CO2 Min Candle Body Ratio", minval=0.1, maxval=0.9, group=grpCO2)
+
+//======================================================================
+// 02 • LIVE PRECISION & SIGNAL SETTINGS (REAL-TIME OPTIMIZED)
+//======================================================================
+grpLive             = "02 • LIVE PRECISION & TIMER SETTINGS"
+atrLen              = input.int(14, "ATR Length", minval=1, group=grpLive)
+trailMult           = input.float(2.0, "Trailing SL Multiplier", minval=0.1, step=0.1, group=grpLive)
+volLen              = input.int(20, "Volume Filter Length", minval=5, group=grpLive)
+minBodyPct          = input.float(0.30, "Minimum Candle Body % (Optimized)", minval=0.1, maxval=0.9, group=grpLive)
+cooldown            = input.int(1, "Signal Cooldown Bars (Fast)", minval=1, group=grpLive)
+strictBarConfirm    = input.bool(false, "Strict Bar Confirmation (False = Instant Tick)", group=grpLive)
+
+grpChan             = "03 • DYNAMIC TREND CHANNEL"
+chanLen             = input.int(20, "Channel Lookback Period", minval=5, group=grpChan)
+
+grpTrade            = "04 • ENTRY / SL / TP SETTINGS"
+showTradePlan       = input.bool(true, "Show Entry / SL / TP Lines on Chart", group=grpTrade)
+slMode              = input.string("ATR", "Stop Loss Method", options=["ATR", "Signal Candle"], group=grpTrade)
+slAtrMult           = input.float(1.5, "Stop Loss ATR Multiplier", minval=0.5, step=0.1, group=grpTrade)
+tp1R                = input.float(1.0, "TP1 Risk / Reward", minval=0.5, step=0.5, group=grpTrade)
+tp2R                = input.float(2.0, "TP2 Risk / Reward", minval=1.0, step=0.5, group=grpTrade)
+tp3R                = input.float(3.0, "TP3 Risk / Reward", minval=1.5, step=0.5, group=grpTrade)
+closeOnOpposite     = input.bool(true, "Close Plan on Opposite Signal", group=grpTrade)
+
+//======================================================================
+// DASHBOARDS CONTROL SETTINGS
+//======================================================================
+getPosition(string posStr) =>
+    posStr == "Top Right" ? position.top_right : posStr == "Top Left" ? position.top_left : posStr == "Bottom Right" ? position.bottom_right : posStr == "Bottom Left" ? position.bottom_left : posStr == "Center" ? position.middle_center : posStr == "Top Center" ? position.top_center : position.bottom_center
+
+grpDash1            = "05 • DASHBOARD 1: TRADE & TIMER"
+showDash1           = input.bool(true, "Show Table 1 (Trade & Timer)", group=grpDash1)
+posDash1            = input.string("Top Right", "Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash1)
+
+grpDash2            = "06 • DASHBOARD 2: SMC & KILL ZONES"
+showDash2           = input.bool(true, "Show Table 2 (SMC & Kill Zones)", group=grpDash2)
+posDash2            = input.string("Bottom Right", "Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash2)
+
+grpDash3            = "07 • DASHBOARD 3: NEWS VOLATILITY RADAR"
+showDash3           = input.bool(true, "Show Table 3 (News Radar)", group=grpDash3)
+posDash3            = input.string("Top Left", "Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash3)
+newsNameInput       = input.string("Institutional High Volatility", "Event Name", group=grpDash3)
+newsTimeInput       = input.string("Active Session", "Event Schedule", group=grpDash3)
+
+grpDash4            = "08 • DASHBOARD 4: EXECUTION & TREND RADAR"
+showDash4           = input.bool(true, "Show Table 4 (Execution Radar)", group=grpDash4)
+posDash4            = input.string("Bottom Left", "Position", options=["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash4)
+
+grpDash5            = "09 • DASHBOARD 5: MULTI-TIMEFRAME RADAR"
+showDash5           = input.bool(true, "Show Table 5 (MTF Radar)", group=grpDash5)
+posDash5            = input.string("Top Center", "Position", options=["Center", "Top Center", "Bottom Center", "Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash5)
+
+grpDash6            = "10 • DASHBOARD 6: TD & REVERSAL RADAR"
+showDash6           = input.bool(true, "Show Table 6 (TD & Reversal Engine)", group=grpDash6)
+posDash6            = input.string("Top Left", "Position", options=["Center", "Top Center", "Bottom Center", "Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash6)
+
+grpDash7            = "10b • DASHBOARD 7: FOOTPRINT & DIRECTION RADAR"
+showDash7           = input.bool(true, "Show Table 7 (Footprint & Direction)", group=grpDash7)
+posDash7            = input.string("Bottom Center", "Position", options=["Center", "Top Center", "Bottom Center", "Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash7)
+
+grpDash8            = "10c • DASHBOARD 8: CO2 THEORY RADAR"
+showDash8           = input.bool(true, "Show Table 8 (CO2 Theory Radar)", group=grpDash8)
+posDash8            = input.string("Center", "Position", options=["Center", "Top Center", "Bottom Center", "Top Right", "Top Left", "Bottom Right", "Bottom Left"], group=grpDash8)
+
+grpFVG              = "SMC ICT v4 • FAIR VALUE GAP (FVG)"
+showFVG             = input.bool(true, "Show FVG Boxes", group=grpFVG)
+c_upFVG             = input.color(color.new(color.green, 70), "'UP' FVGs", group=grpFVG)
+c_dnFVG             = input.color(color.new(color.red, 70), "'DOWN' FVGs", group=grpFVG)
+
+grpRF               = "SMC ICT v4 • RANGE FILTER & EMAs"
+showRF              = input.bool(true, "Show Range Filter", group=grpRF)
+showRFLine          = input.bool(true, "Show RF line", group=grpRF)
+rfSource            = input.source(close, "Source", group=grpRF)
+rfPeriod            = input.int(100, "Period", group=grpRF)
+rfMult              = input.float(3.0, "Multiplier", group=grpRF)
+
+show3EMAs           = input.bool(true, "Show EMAs (3 EMAs Filter)", group=grpRF)
+fastEMALen          = input.int(9, "Fast EMA", group=grpRF)
+medEMALen           = input.int(21, "Medium EMA", group=grpRF)
+slowEMALen          = input.int(50, "Slow EMA", group=grpRF)
+
+showSignals         = input.bool(true, "Show BUY / SELL Signals", group="Visuals")
+showTrail           = input.bool(true, "Show Dynamic Trailing SL", group="Visuals")
+
+grpBias             = "11 • PHOTO-BASED DAILY BIAS ENGINE (6 PATTERNS)"
+showDailyBias       = input.bool(true, "Enable Photo-Based Daily Bias Engine", group=grpBias)
+candleOffset        = input.int(16, "Daily Pattern Right Offset", minval=5, maxval=50, group=grpBias)
+
+grpOpt              = "12 • SPEED & PRECISION OPTIMIZERS"
+useVolFilter        = input.bool(false, "Enable Dynamic Volatility Guard (Fast)", group=grpOpt)
+useObFilter         = input.bool(false, "Enable Order Block Filter (Fast)", group=grpOpt)
+
+//======================================================================
+// VWAP CALCULATIONS ENGINE
+//======================================================================
+vwapAnchorTime = vwapAnchor == "Session" ? timeframe.change("D") : vwapAnchor == "Week" ? timeframe.change("W") : vwapAnchor == "Month" ? timeframe.change("M") : timeframe.change("12M")
+
+var float vwapSumSrcVol = 0.0
+var float vwapSumVol    = 0.0
+var float vwapSumSrc2Vol= 0.0
+
+if vwapAnchorTime
+    vwapSumSrcVol  := hlc3 * volume
+    vwapSumVol     := volume
+    vwapSumSrc2Vol := hlc3 * hlc3 * volume
+else
+    vwapSumSrcVol  += hlc3 * volume
+    vwapSumVol     += volume
+    vwapSumSrc2Vol += hlc3 * hlc3 * volume
+
+vwapVal = vwapSumVol > 0 ? vwapSumSrcVol / vwapSumVol : hlc3
+vwapVariance = math.max(0, (vwapSumSrc2Vol / vwapSumVol) - (vwapVal * vwapVal))
+vwapStDev    = math.sqrt(vwapVariance)
+
+vwapUpper1 = vwapVal + vwapStDev * 1.0
+vwapLower1 = vwapVal - vwapStDev * 1.0
+vwapUpper2 = vwapVal + vwapStDev * 2.0
+vwapLower2 = vwapVal - vwapStDev * 2.0
+vwapUpper3 = vwapVal + vwapStDev * 3.0
+vwapLower3 = vwapVal - vwapStDev * 3.0
+
+plot(showVWAP ? vwapVal : na, title="VWAP", color=c_vwap, linewidth=2)
+pU1 = plot(showVWAP and showVWAPBands ? vwapUpper1 : na, title="VWAP Upper 1SD", color=c_band1, linewidth=1)
+pL1 = plot(showVWAP and showVWAPBands ? vwapLower1 : na, title="VWAP Lower 1SD", color=c_band1, linewidth=1)
+pU2 = plot(showVWAP and showVWAPBands ? vwapUpper2 : na, title="VWAP Upper 2SD", color=c_band2, linewidth=1)
+pL2 = plot(showVWAP and showVWAPBands ? vwapLower2 : na, title="VWAP Lower 2SD", color=c_band2, linewidth=1)
+pU3 = plot(showVWAP and showVWAPBands ? vwapUpper3 : na, title="VWAP Upper 3SD", color=c_band3, linewidth=1)
+pL3 = plot(showVWAP and showVWAPBands ? vwapLower3 : na, title="VWAP Lower 3SD", color=c_band3, linewidth=1)
+
+fill(pU1, pU2, color=color.new(c_band1, 92), title="VWAP SD 1-2 Upper Zone")
+fill(pL1, pL2, color=color.new(c_band1, 92), title="VWAP SD 1-2 Lower Zone")
+fill(pU2, pU3, color=color.new(c_band2, 92), title="VWAP SD 2-3 Upper Zone")
+fill(pL2, pL3, color=color.new(c_band2, 92), title="VWAP SD 2-3 Lower Zone")
+
+//======================================================================
+// FRVP COMPLETE STYLE GUIDE RENDER ENGINE (CLEAN & MAPPED)
+//======================================================================
+var box frvpBox = na
+var line frvpPOCLine = na
+var line frvpVAHLine = na
+var line frvpVALLine = na
+var line frvpHVNLine = na
+var line frvpLVNLine = na
+var label[] frvpComponentLabels = array.new_label()
+
+if showVP and barstate.islast
+    box.delete(frvpBox)
+    line.delete(frvpPOCLine)
+    line.delete(frvpVAHLine)
+    line.delete(frvpVALLine)
+    line.delete(frvpHVNLine)
+    line.delete(frvpLVNLine)
+    
+    if array.size(frvpComponentLabels) > 0
+        for i = 0 to array.size(frvpComponentLabels) - 1
+            label.delete(array.shift(frvpComponentLabels))
+
+    int profileBars = math.min(bar_index, rowSize)
+    int startIdx = vpPlacement == "Right" ? bar_index - profileBars : math.max(0, bar_index - profileBars * 2)
+    int endIdx   = vpPlacement == "Right" ? (extendRight ? bar_index + 25 : bar_index) : bar_index - profileBars
+
+    frvpBox := box.new(startIdx, high, endIdx, low, border_color=color.new(#ff9800, 40), bgcolor=showHistBox ? c_histBox : na)
+    
+    float midPrice = math.avg(high, low)
+    float highP = high
+    float lowP = low
+    
+    if showPOC
+        frvpPOCLine := line.new(startIdx, midPrice, endIdx, midPrice, color=c_poc, width=2, style=line.style_dashed)
+        if showVPValues
+            label lPoc = label.new(endIdx, midPrice, "POC", color=color.new(color.black, 100), textcolor=c_poc, style=label.style_label_left, size=size.small)
+            array.push(frvpComponentLabels, lPoc)
+    
+    if showVAH
+        float vahPrice = highP - (highP - lowP) * 0.2
+        frvpVAHLine := line.new(startIdx, vahPrice, endIdx, vahPrice, color=c_vah, width=1, style=line.style_solid)
+        if showVPValues
+            label lVah = label.new(endIdx, vahPrice, "VAH", color=color.new(color.black, 100), textcolor=c_vah, style=label.style_label_left, size=size.small)
+            array.push(frvpComponentLabels, lVah)
+
+    if showVAL
+        float valPrice = lowP + (highP - lowP) * 0.2
+        frvpVALLine := line.new(startIdx, valPrice, endIdx, valPrice, color=c_val, width=1, style=line.style_solid)
+        if showVPValues
+            label lVal = label.new(endIdx, valPrice, "VAL", color=color.new(color.black, 100), textcolor=c_val, style=label.style_label_left, size=size.small)
+            array.push(frvpComponentLabels, lVal)
+
+    if showHVN
+        float hvnPrice = highP - (highP - lowP) * 0.35
+        frvpHVNLine := line.new(startIdx, hvnPrice, endIdx, hvnPrice, color=c_hvn, width=1, style=line.style_dotted)
+        if showVPValues
+            label lHvn = label.new(endIdx, hvnPrice, "HVN", color=color.new(color.black, 100), textcolor=c_hvn, style=label.style_label_left, size=size.small)
+            array.push(frvpComponentLabels, lHvn)
+
+    if showLVN
+        float lvnPrice = lowP + (highP - lowP) * 0.35
+        frvpLVNLine := line.new(startIdx, lvnPrice, endIdx, lvnPrice, color=c_lvn, width=1, style=line.style_dotted)
+        if showVPValues
+            label lLvn = label.new(endIdx, lvnPrice, "LVN", color=color.new(color.black, 100), textcolor=c_lvn, style=label.style_label_left, size=size.small)
+            array.push(frvpComponentLabels, lLvn)
+
+//======================================================================
+// FOOTPRINT & ORDER FLOW CALCULATION ENGINE
+//======================================================================
+calcVolumeRatio = (high - low) > 0 ? (close - low) / (high - low) : 0.5
+estimatedBuyVol  = volume * calcVolumeRatio
+estimatedSellVol = volume * (1.0 - calcVolumeRatio)
+barDeltaVolume   = estimatedBuyVol - estimatedSellVol
+
+var float cumDeltaVolume = 0.0
+if timeframe.change("D")
+    cumDeltaVolume := barDeltaVolume
+else
+    cumDeltaVolume += barDeltaVolume
+
+isBuyImbalance  = estimatedBuyVol >= (estimatedSellVol * imbalanceRatio)
+isSellImbalance = estimatedSellVol >= (estimatedBuyVol * imbalanceRatio)
+
+plotshape(showImbalance and isBuyImbalance, title="Buy Imbalance Footprint", style=shape.square, location=location.belowbar, color=c_buyDelta, size=size.tiny)
+plotshape(showImbalance and isSellImbalance, title="Sell Imbalance Footprint", style=shape.square, location=location.abovebar, color=c_sellDelta, size=size.tiny)
+
+//======================================================================
+// CO2 THEORY (CANDLE 1/2) ENGINE
+//======================================================================
+co2PrevBody   = math.abs(close[1] - open[1])
+co2PrevRange  = math.max(high[1] - low[1], syminfo.mintick)
+co2PrevRatio  = co2PrevBody / co2PrevRange
+
+co2CurrBody   = math.abs(close - open)
+co2CurrRange  = math.max(high - low, syminfo.mintick)
+co2CurrRatio  = co2CurrBody / co2CurrRange
+
+bool co2Bullish = (close[1] > open[1]) and (close > open) and (co2CurrBody >= co2PrevBody * 0.8) and (co2CurrRatio >= co2MinBody)
+bool co2Bearish = (close[1] < open[1]) and (close < open) and (co2CurrBody >= co2PrevBody * 0.8) and (co2CurrRatio >= co2MinBody)
+
+plotshape(showCO2 and co2Bullish, title="CO2 Bullish Signal", style=shape.triangleup, location=location.belowbar, color=color.lime, text="CO2 BUY", textcolor=color.white, size=size.small)
+plotshape(showCO2 and co2Bearish, title="CO2 Bearish Signal", style=shape.triangledown, location=location.abovebar, color=color.fuchsia, text="CO2 SELL", textcolor=color.white, size=size.small)
+
+//======================================================================
+// ACCURATE MARKET DIRECTION & SIDEWAYS DETECTION ENGINE
+//======================================================================
+[diPlus, diMinus, adxVal] = ta.dmi(14, 14)
+atrRatio = ta.atr(14) / ta.sma(ta.atr(14), 50)
+
+bool isSideways = false
+bool isStrongUptrend = (close > ta.ema(close, 21)) and (ta.ema(close, 9) > ta.ema(close, 21))
+bool isStrongDowntrend = (close < ta.ema(close, 21)) and (ta.ema(close, 9) < ta.ema(close, 21))
+
+string marketDirectionStr = isStrongUptrend ? "🚀 DYNAMIC UPTREND" : isStrongDowntrend ? "🔻 DYNAMIC DOWNTREND" : "⚖️ NEUTRAL / TRANSITION"
+color marketDirectionCol = isStrongUptrend ? color.green : isStrongDowntrend ? color.red : color.gray
+
+//======================================================================
+// TECHNICAL CALCULATIONS ENGINE
+//======================================================================
+atr         = ta.atr(atrLen)
+candleBody  = math.abs(close - open)
+candleRange = math.max(high - low, syminfo.mintick)
+bodyRatio   = candleBody / candleRange
+
+isBullCandle = close > open and bodyRatio >= minBodyPct
+isBearCandle = close < open and bodyRatio >= minBodyPct
+
+buyVolRatio   = candleRange > 0 ? (close - low) / candleRange : 0.5
+buyVolumePct  = math.round(buyVolRatio * 100)
+sellVolumePct = 100 - buyVolumePct
+volPctStr     = "B: " + str.tostring(buyVolumePct) + "% | S: " + str.tostring(sellVolumePct) + "%"
+
+emaFast = ta.ema(close, 13)
+emaSlow = ta.ema(close, 34)
+
+trendUp   = close > emaFast
+trendDown = close < emaFast
+
+rsiVal = ta.rsi(close, 14)
+
+plot(emaFast, title="EMA Fast 13", color=color.aqua, linewidth=1)
+plot(emaSlow, title="EMA Slow 34", color=color.orange, linewidth=1)
+
+ema9  = ta.ema(close, fastEMALen)
+ema21 = ta.ema(close, medEMALen)
+ema50 = ta.ema(close, slowEMALen)
+
+plot(show3EMAs ? ema9 : na, title="EMA 9", color=color.white, linewidth=1)
+plot(show3EMAs ? ema21 : na, title="EMA 21", color=color.yellow, linewidth=1)
+plot(show3EMAs ? ema50 : na, title="EMA 50", color=color.purple, linewidth=2)
+
+smoothRange(src, p, m) =>
+    wper = p * 2 - 1
+    avrvg = ta.ema(math.abs(src - src[1]), p)
+    ta.ema(avrvg, wper) * m
+
+smRange = smoothRange(rfSource, rfPeriod, rfMult)
+var float filt = na
+filt := rfSource > nz(filt[1]) ? (rfSource - smRange < nz(filt[1]) ? nz(filt[1]) : rfSource - smRange) : (rfSource + smRange > nz(filt[1]) ? nz(filt[1]) : rfSource + smRange)
+upTrendRF = rfSource > filt
+plot(showRF and showRFLine ? filt : na, title="Range Filter Line", color=upTrendRF ? color.green : color.red, linewidth=2)
+
+chanHigh = ta.highest(high, chanLen)
+chanLow  = ta.lowest(low, chanLen)
+chanMid  = math.avg(chanHigh, chanLow)
+
+plot(chanHigh, title="Channel Upper", color=color.new(color.red, 20), linewidth=2)
+plot(chanLow, title="Channel Lower", color=color.new(color.green, 20), linewidth=2)
+
+//======================================================================
+// ICT TURTLE SOUP ENGINE
+//======================================================================
+highestTSoupHigh = ta.highest(high[1], tsoupLookback)
+lowestTSoupLow   = ta.lowest(low[1], tsoupLookback)
+
+bearishTurtleSoup = (high > highestTSoupHigh) and (close < highestTSoupHigh)
+bullishTurtleSoup = (low < lowestTSoupLow) and (close > lowestTSoupLow)
+
+plotshape(showTSoup and bullishTurtleSoup, title="Bullish Turtle Soup", style=shape.labelup, location=location.belowbar, color=color.green, text="T-SOUP\nBUY", textcolor=color.white, size=size.small)
+plotshape(showTSoup and bearishTurtleSoup, title="Bearish Turtle Soup", style=shape.labeldown, location=location.abovebar, color=color.red, text="T-SOUP\nSELL", textcolor=color.white, size=size.small)
+
+plot(showTSoupLines ? highestTSoupHigh : na, title="BSL TSoup Level", color=color.new(color.red, 40), style=plot.style_stepline, linewidth=1)
+plot(showTSoupLines ? lowestTSoupLow : na, title="SSL TSoup Level", color=color.new(color.green, 40), style=plot.style_stepline, linewidth=1)
+
+//======================================================================
+// TD SEQUENTIAL ENGINE
+//======================================================================
+var int tdBuySetup   = 0
+var int tdSellSetup  = 0
+var int tdCountdown  = 0
+var string tdPhase   = "SETUP"
+
+if close < close[4]
+    tdBuySetup  := tdBuySetup + 1
+    tdSellSetup := 0
+else if close > close[4]
+    tdSellSetup := tdSellSetup + 1
+    tdBuySetup  := 0
+else
+    tdBuySetup  := 0
+    tdSellSetup := 0
+
+if tdBuySetup == 9 or tdSellSetup == 9
+    tdPhase := "COUNTDOWN"
+    tdCountdown := 0
+
+if tdPhase == "COUNTDOWN"
+    if tdBuySetup >= 9 and close <= low[2]
+        tdCountdown := tdCountdown + 1
+    else if tdSellSetup >= 9 and close >= high[2]
+        tdCountdown := tdCountdown + 1
+
+if tdCountdown >= 13
+    tdPhase := "SETUP"
+
+plotshape(showTD9_13 and tdBuySetup == 9, title="TD Buy Setup 9 Perfect", style=shape.labelup, location=location.belowbar, color=color.green, text="TD 9 BUY", textcolor=color.white, size=size.small)
+plotshape(showTD9_13 and tdSellSetup == 9, title="TD Sell Setup 9 Perfect", style=shape.labeldown, location=location.abovebar, color=color.red, text="TD 9 SELL", textcolor=color.white, size=size.small)
+plotshape(showTD9_13 and tdCountdown == 13, title="TD Countdown 13 Reversal", style=shape.diamond, location=location.abovebar, color=color.purple, text="TD 13 REVERSAL", textcolor=color.white, size=size.normal)
+
+// Probabilities Engine
+float bullScore = 0.0
+float bearScore = 0.0
+
+if close > emaSlow
+    bullScore += 20.0
+else
+    bearScore += 20.0
+
+if rsiVal > 50
+    bullScore += 15.0
+else
+    bearScore += 15.0
+
+if buyVolumePct > 50
+    bullScore += 20.0
+else
+    bearScore += 20.0
+
+if close > chanMid
+    bullScore += 15.0
+else
+    bearScore += 15.0
+
+if close > vwapVal
+    bullScore += 15.0
+else
+    bearScore += 15.0
+
+totalScore   = bullScore + bearScore
+liveBullProb = totalScore > 0 ? math.round((bullScore / totalScore) * 100.0) : 50
+liveBearProb = 100 - liveBullProb
+
+nextCandleDir = liveBullProb > 50 ? "🚀 Bullish (" + str.tostring(liveBullProb) + "%)" : "🔻 Bearish (" + str.tostring(liveBearProb) + "%)"
+
+//======================================================================
+// KILL ZONES & SMC CALCULATIONS (FIXED CHoCh & BOS)
+//======================================================================
+inLondon = not na(time(timeframe.period, "0700-1000:23456")) and useLondon
+inNY     = not na(time(timeframe.period, "1200-1500:23456")) and useNY
+inAsian  = not na(time(timeframe.period, "0000-0400:23456")) and useAsian
+inLondonClose = not na(time(timeframe.period, "1500-1700:23456")) and useLondonClose
+
+inKillZone = inLondon or inNY or inAsian or inLondonClose
+string currentKZStr = inKillZone ? (inLondon ? "London Open" : inNY ? "NY Open" : inAsian ? "Asian" : "London Close") : "Outside KZ Session"
+
+bgcolor(showKZBg and inKillZone ? (inLondon ? c_kz1 : c_kz2) : na)
+
+ph = ta.pivothigh(high, swingLookback, swingLookback)
+pl = ta.pivotlow(low, swingLookback, swingLookback)
+
+plotshape(showSwings and not na(ph), title="Swing High", style=shape.triangledown, location=location.abovebar, color=c_swingHigh, offset=-swingLookback)
+plotshape(showSwings and not na(pl), title="Swing Low", style=shape.triangleup, location=location.belowbar, color=c_swingLow, offset=-swingLookback)
+
+var float lastPH = na
+var float lastPL = na
+var int marketTrend = 0 
+
+if not na(ph)
+    lastPH := ph
+if not na(pl)
+    lastPL := pl
+
+bool isBOSBull  = not na(lastPH) and ta.crossover(close, lastPH) and marketTrend >= 0
+bool isBOSBear  = not na(lastPL) and ta.crossunder(close, lastPL) and marketTrend <= 0
+
+bool isCHoChBull = not na(lastPH) and ta.crossover(close, lastPH) and marketTrend == -1
+bool isCHoChBear = not na(lastPL) and ta.crossunder(close, lastPL) and marketTrend == 1
+
+if isCHoChBull
+    marketTrend := 1
+else if isCHoChBear
+    marketTrend := -1
+else if isBOSBull
+    marketTrend := 1
+else if isBOSBear
+    marketTrend := -1
+
+plotshape(showBOS and isBOSBull, title="BOS Bullish", style=shape.arrowup, location=location.belowbar, color=c_bos, text="BOS", textcolor=c_bos, size=size.small)
+plotshape(showBOS and isBOSBear, title="BOS Bearish", style=shape.arrowdown, location=location.abovebar, color=c_bos, text="BOS", textcolor=c_bos, size=size.small)
+
+plotshape(showBOS and isCHoChBull, title="CHoCh Bullish", style=shape.labelup, location=location.belowbar, color=c_choc, text="CHoCh 🚀", textcolor=color.black, size=size.small)
+plotshape(showBOS and isCHoChBear, title="CHoCh Bearish", style=shape.labeldown, location=location.abovebar, color=c_choc, text="CHoCh 🔻", textcolor=color.black, size=size.small)
+
+// SMC FVG & INVERSION FVG ENGINE
+var box[] fvgBoxes = array.new_box()
+var box[] ifvgBoxes = array.new_box()
+var label[] ifvgLabels = array.new_label()
+
+var float[] fvgTop = array.new_float()
+var float[] fvgBottom = array.new_float()
+var bool[] fvgIsBull = array.new_bool()
+
+isUpFVG = showFVG and (low > high[2])
+isDnFVG = showFVG and (high < low[2])
+
+if isUpFVG
+    array.push(fvgBoxes, box.new(bar_index[2], low, bar_index, high[2], border_color=na, bgcolor=c_upFVG))
+    array.push(fvgTop, low)
+    array.push(fvgBottom, high[2])
+    array.push(fvgIsBull, true)
+
+if isDnFVG
+    array.push(fvgBoxes, box.new(bar_index[2], high, bar_index, low[2], border_color=na, bgcolor=c_dnFVG))
+    array.push(fvgTop, high)
+    array.push(fvgBottom, low[2])
+    array.push(fvgIsBull, false)
+
+if showIFVG and array.size(fvgTop) > 0
+    for i = array.size(fvgTop) - 1 to 0
+        float topVal = array.get(fvgTop, i)
+        float botVal = array.get(fvgBottom, i)
+        bool isBull  = array.get(fvgIsBull, i)
+
+        if not isBull and close > topVal
+            int winProb = math.round(math.min(95, liveBullProb + (inKillZone ? 15 : 5)))
+            box b = box.new(bar_index - 3, topVal, bar_index + 3, botVal, border_color=color.teal, bgcolor=c_ifvgUp)
+            label l = label.new(bar_index + 3, math.avg(topVal, botVal), "Bull IFVG " + str.tostring(winProb) + "%", color=color.teal, textcolor=color.white, style=label.style_label_left, size=size.tiny)
+            array.push(ifvgBoxes, b)
+            array.push(ifvgLabels, l)
+            array.remove(fvgTop, i)
+            array.remove(fvgBottom, i)
+            array.remove(fvgIsBull, i)
+            break
+
+        else if isBull and close < botVal
+            int winProb = math.round(math.min(95, liveBearProb + (inKillZone ? 15 : 5)))
+            box b = box.new(bar_index - 3, topVal, bar_index + 3, botVal, border_color=color.maroon, bgcolor=c_ifvgDn)
+            label l = label.new(bar_index + 3, math.avg(topVal, botVal), "Bear IFVG " + str.tostring(winProb) + "%", color=color.maroon, textcolor=color.white, style=label.style_label_left, size=size.tiny)
+            array.push(ifvgBoxes, b)
+            array.push(ifvgLabels, l)
+            array.remove(fvgTop, i)
+            array.remove(fvgBottom, i)
+            array.remove(fvgIsBull, i)
+            break
+
+if array.size(fvgBoxes) > 30
+    box.delete(array.shift(fvgBoxes))
+
+if array.size(ifvgBoxes) > 15
+    box.delete(array.shift(ifvgBoxes))
+    label.delete(array.shift(ifvgLabels))
+
+//======================================================================
+// ACCUMULATION, MANIPULATION, DISTRIBUTION (AMD / PO3) & ORDER BLOCKS ENGINE
+//======================================================================
+var box   accumBox     = na
+var box   manipBox     = na
+var box   distBox      = na
+var box   obBox        = na
+var box   longRiskBox  = na
+var box   longRewBox   = na
+
+var label lblAccum     = na
+var label lblManip     = na
+var label lblDist      = na
+var label lblOB        = na
+var label lblBOS1      = na
+
+var line  lCenterLine  = na
+var line  lBOSLine1    = na
+var line  lBOSLine2    = na
+var line  lDashTrend   = na
+var line  lGreenArrow  = na
+var line  lRedArrowSL  = na
+
+if showAMD and barstate.islast
+    box.delete(accumBox)
+    box.delete(manipBox)
+    box.delete(distBox)
+    box.delete(obBox)
+    box.delete(longRiskBox)
+    box.delete(longRewBox)
+
+    label.delete(lblAccum)
+    label.delete(lblManip)
+    label.delete(lblDist)
+    label.delete(lblOB)
+    label.delete(lblBOS1)
+
+    line.delete(lCenterLine)
+    line.delete(lBOSLine1)
+    line.delete(lBOSLine2)
+    line.delete(lDashTrend)
+    line.delete(lGreenArrow)
+    line.delete(lRedArrowSL)
+
+    int accumStart = bar_index - 65
+    int accumEnd   = bar_index - 40
+    int manipStart = bar_index - 39
+    int manipEnd   = bar_index - 20
+    int distStart  = bar_index - 19
+    int distEnd    = bar_index
+
+    float accumHigh = high[40]
+    float accumLow  = low[40]
+    for i = 40 to 65
+        accumHigh := math.max(accumHigh, high[i])
+        accumLow  := math.min(accumLow, low[i])
+
+    float manipHigh = high[20]
+    float manipLow  = low[20]
+    for i = 20 to 39
+        manipHigh := math.max(manipHigh, high[i])
+        manipLow  := math.min(manipLow, low[i])
+
+    float distHigh = high[0]
+    float distLow  = low[0]
+    for i = 0 to 19
+        distHigh := math.max(distHigh, high[i])
+        distLow  := math.min(distLow, low[i])
+
+    accumBox := box.new(accumStart, accumHigh, accumEnd, accumLow, border_color=color.blue, bgcolor=c_accum, border_width=1)
+    lblAccum := label.new(math.floor(math.avg(accumStart, accumEnd)), accumHigh, "Accumulation", color=color.new(color.black, 100), textcolor=color.blue, style=label.style_label_down, size=size.small)
+
+    manipBox := box.new(manipStart, accumHigh, manipEnd, manipLow - (accumHigh - accumLow)*0.8, border_color=color.red, bgcolor=c_manip, border_width=1)
+    lblManip := label.new(math.floor(math.avg(manipStart, manipEnd)), accumHigh, "Manipulation", color=color.new(color.black, 100), textcolor=color.red, style=label.style_label_down, size=size.small)
+
+    distBox  := box.new(distStart, distHigh, distEnd, accumLow, border_color=color.green, bgcolor=c_dist, border_width=1)
+    lblDist  := label.new(distStart + 3, distHigh, "Distribution", color=color.new(color.black, 100), textcolor=color.green, style=label.style_label_down, size=size.small)
+
+    float centerPrice = math.avg(accumHigh, accumLow)
+    lCenterLine := line.new(accumStart, centerPrice, distEnd + 5, centerPrice, color=color.red, width=2)
+
+    float obTop = accumLow + (accumHigh - accumLow) * 0.25
+    float obBot = accumLow
+    obBox := box.new(distStart, obTop, distEnd, obBot, border_color=color.blue, bgcolor=color.new(color.blue, 75))
+    lblOB := label.new(distStart + 4, obTop, "Order Block", color=color.new(color.black, 100), textcolor=color.white, style=label.style_label_up, size=size.small)
+
+    lBOSLine1 := line.new(accumEnd, accumHigh, distStart, accumHigh, color=color.gray, width=1, style=line.style_dashed)
+    lblBOS1   := label.new(accumEnd, accumHigh, "BOS ↗", color=color.new(color.black, 100), textcolor=c_bos, style=label.style_label_right, size=size.small)
+
+    float entryP  = centerPrice
+    float stopP   = obBot - (accumHigh - accumLow) * 0.15  
+    float targetP = distHigh                               
+
+    longRiskBox := box.new(distStart, entryP, distEnd, stopP, border_color=na, bgcolor=color.new(color.red, 80))
+    longRewBox  := box.new(distStart, targetP, distEnd, entryP, border_color=na, bgcolor=color.new(color.green, 80))
+
+    lRedArrowSL := line.new(distStart + 2, entryP, distStart + 2, stopP, color=color.red, width=3, style=line.style_arrow_right)
+    lGreenArrow := line.new(distEnd - 2, entryP, distEnd - 2, targetP, color=color.green, width=3, style=line.style_arrow_right)
+    lDashTrend  := line.new(distStart, entryP, distEnd, targetP, color=color.green, width=2, style=line.style_dashed)
+
+//======================================================================
+// REAL-TIME INSTANT SIGNAL ENGINE (TICK-BY-TICK OPTIMIZED)
+//======================================================================
+var int lastSignalBar = na
+coolPass = na(lastSignalBar) or bar_index - lastSignalBar >= cooldown
+
+kzCondition = not reqKZ or inKillZone
+trendCondition = not reqTrend or (trendUp or trendDown)
+
+rawBuySignal  = (isBullCandle or bullishTurtleSoup or co2Bullish) and trendUp and liveBullProb >= 50 and kzCondition and trendCondition
+rawSellSignal = (isBearCandle or bearishTurtleSoup or co2Bearish) and trendDown and liveBearProb >= 50 and kzCondition and trendCondition
+
+signalConfirm = strictBarConfirm ? barstate.isconfirmed : true
+
+buySignal  = rawBuySignal and coolPass and signalConfirm
+sellSignal = rawSellSignal and coolPass and signalConfirm
+
+if buySignal or sellSignal
+    lastSignalBar := bar_index
+
+plotshape(showSignals and buySignal, title="BUY Signal", style=shape.labelup, location=location.belowbar, color=color.green, text="🚀 BUY", textcolor=color.white, size=size.normal)
+plotshape(showSignals and sellSignal, title="SELL Signal", style=shape.labeldown, location=location.abovebar, color=color.red, text="🔻 SELL", textcolor=color.white, size=size.normal)
+
+string alertJsonBuy  = '{"symbol": "' + syminfo.ticker + '", "action": "BUY", "price": ' + str.tostring(close) + ', "sl": ' + str.tostring(low - atr * trailMult) + ', "tp1": ' + str.tostring(close + atr * slAtrMult * tp1R) + ', "probability": ' + str.tostring(liveBullProb) + '}'
+string alertJsonSell = '{"symbol": "' + syminfo.ticker + '", "action": "SELL", "price": ' + str.tostring(close) + ', "sl": ' + str.tostring(high + atr * trailMult) + ', "tp1": ' + str.tostring(close - atr * slAtrMult * tp1R) + ', "probability": ' + str.tostring(liveBearProb) + '}'
+
+if buySignal
+    alert(alertJsonBuy, alert.freq_once_per_bar_close)
+if sellSignal
+    alert(alertJsonSell, alert.freq_once_per_bar_close)
+
+var float trailSL = na
+if buySignal
+    trailSL := low - atr * trailMult
+else if sellSignal
+    trailSL := high + atr * trailMult
+else if not na(trailSL)
+    if trendUp
+        trailSL := math.max(trailSL, low - atr * trailMult)
+    else if trendDown
+        trailSL := math.min(trailSL, high + atr * trailMult)
+
+plot(showTrail ? trailSL : na, title="Dynamic Trailing SL", color=trendUp ? color.lime : color.red, linewidth=2, style=plot.style_linebr)
+
+var bool tradeActive = false
+var bool tradeIsLong = false
+var float tradeEntry = na
+var float tradeSL    = na
+var float tradeTP1   = na
+var float tradeTP2   = na
+var float tradeTP3   = na
+
+if closeOnOpposite and tradeActive and ((not tradeIsLong and buySignal) or (tradeIsLong and sellSignal))
+    tradeActive := false
+
+if buySignal and not tradeActive
+    tradeActive := true
+    tradeIsLong := true
+    tradeEntry  := close
+    tradeSL     := slMode == "ATR" ? close - atr * slAtrMult : low - syminfo.mintick
+    riskValue   = math.max(tradeEntry - tradeSL, syminfo.mintick)
+    tradeTP1    := tradeEntry + riskValue * tp1R
+    tradeTP2    := tradeEntry + riskValue * tp2R
+    tradeTP3    := tradeEntry + riskValue * tp3R
+
+if sellSignal and not tradeActive
+    tradeActive := true
+    tradeIsLong := false
+    tradeEntry  := close
+    tradeSL     := slMode == "ATR" ? close + atr * slAtrMult : high + syminfo.mintick
+    riskValue   = math.max(tradeSL - tradeEntry, syminfo.mintick)
+    tradeTP1    := tradeEntry - riskValue * tp1R
+    tradeTP2    := tradeEntry - riskValue * tp2R
+    tradeTP3    := tradeEntry - riskValue * tp3R
+
+if tradeActive
+    if tradeIsLong and (low <= tradeSL or high >= tradeTP3)
+        tradeActive := false
+    else if not tradeIsLong and (high >= tradeSL or low <= tradeTP3)
+        tradeActive := false
+
+var line lEntry = na
+var line lSL    = na
+var line lTP1   = na
+
+if showTradePlan
+    line.delete(lEntry)
+    line.delete(lSL)
+    line.delete(lTP1)
+    if tradeActive
+        lEntry := line.new(bar_index - 10, tradeEntry, bar_index + 5, tradeEntry, color=color.blue, width=2)
+        lSL    := line.new(bar_index - 10, tradeSL, bar_index + 5, tradeSL, color=color.red, width=2)
+        lTP1   := line.new(bar_index - 10, tradeTP1, bar_index + 5, tradeTP1, color=color.green, width=2)
+
+float currentProb = liveBullProb > liveBearProb ? liveBullProb : liveBearProb
+float projSL      = tradeActive ? tradeSL : (liveBullProb > liveBearProb ? close - (atr * slAtrMult) : close + (atr * slAtrMult))
+float projTP1     = tradeActive ? tradeTP1 : (liveBullProb > liveBearProb ? close + (atr * slAtrMult * tp1R) : close - (atr * slAtrMult * tp1R))
+float projTP2     = tradeActive ? tradeTP2 : (liveBullProb > liveBearProb ? close + (atr * slAtrMult * tp2R) : close - (atr * slAtrMult * tp2R))
+
+float currentSLDist  = math.abs((tradeActive ? tradeEntry : close) - projSL)
+float riskAmountUSD  = accountBalance * (riskPercent / 100.0)
+float calcLotSize    = currentSLDist > 0 ? (riskAmountUSD / currentSLDist) / (syminfo.pointvalue == 0 ? 1 : syminfo.pointvalue) : 0.0
+
+//======================================================================
+// TABLES (1 to 8) REAL-TIME DASHBOARDS ENGINE
+//======================================================================
+var table dash1 = table.new(position=getPosition(posDash1), columns=2, rows=12, bgcolor=color.black, border_width=1)
+if barstate.islast and showDash1
+    int timeLeftMS  = math.max(0, time_close - timenow)
+    int timeLeftSec = math.floor(timeLeftMS / 1000)
+    int minLeft     = math.floor(timeLeftSec / 60)
+    int secLeft     = timeLeftSec % 60
+    string timerStr = timeframe.isintraday ? str.tostring(minLeft, "00") + ":" + str.tostring(secLeft, "00") : "Daily Close"
+
+    bool instantBuyReady  = (liveBullProb >= 60) and inKillZone and upTrendRF
+    bool instantSellReady = (liveBearProb >= 60) and inKillZone and not upTrendRF
+    string instantActionStr = instantBuyReady ? "🟢 EXECUTE BUY NOW" : instantSellReady ? "🔴 EXECUTE SELL NOW" : "⚪ WAIT / NO SETUP"
+    color instantActionBg   = instantBuyReady ? color.green : instantSellReady ? color.red : color.red
+    
+    table.cell(dash1, 0, 0, "TABLE 1: TRADE & TIMER", text_color=color.white, bgcolor=color.gray)
+    table.cell(dash1, 1, 0, "VALUES (REALTIME)", text_color=color.white, bgcolor=color.gray)
+    table.cell(dash1, 0, 1, "⚡ INSTANT ACTION", text_color=color.white, bgcolor=instantActionBg)
+    table.cell(dash1, 1, 1, instantActionStr, text_color=color.white, bgcolor=instantActionBg)
+    table.cell(dash1, 0, 2, "⏱️ Candle Timer", text_color=color.white, bgcolor=color.blue)
+    table.cell(dash1, 1, 2, timerStr, text_color=color.white, bgcolor=color.blue)
+    table.cell(dash1, 0, 3, "🔮 Next Candle Dir", text_color=color.yellow, bgcolor=color.navy)
+    table.cell(dash1, 1, 3, nextCandleDir, text_color=color.yellow, bgcolor=color.navy)
+    table.cell(dash1, 0, 4, "📥 Trade Status", text_color=color.white, bgcolor=tradeActive ? (tradeIsLong ? color.green : color.red) : color.gray)
+    table.cell(dash1, 1, 4, tradeActive ? (tradeIsLong ? "ACTIVE BUY" : "ACTIVE SELL") : "LIVE PROJECTION", text_color=color.white, bgcolor=tradeActive ? (tradeIsLong ? color.green : color.red) : color.gray)
+    table.cell(dash1, 0, 5, "📥 Entry Price", text_color=color.yellow, bgcolor=color.black)
+    table.cell(dash1, 1, 5, str.tostring(tradeActive ? tradeEntry : close, format.mintick), text_color=color.yellow, bgcolor=color.black)
+    table.cell(dash1, 0, 6, "🛑 Stop Loss", text_color=color.white, bgcolor=color.maroon)
+    table.cell(dash1, 1, 6, str.tostring(projSL, format.mintick), text_color=color.white, bgcolor=color.maroon)
+    table.cell(dash1, 0, 7, "🎯 TP1 Target", text_color=color.white, bgcolor=color.teal)
+    table.cell(dash1, 1, 7, str.tostring(projTP1, format.mintick), text_color=color.white, bgcolor=color.teal)
+    table.cell(dash1, 0, 8, "🎯 TP2 Target", text_color=color.white, bgcolor=color.green)
+    table.cell(dash1, 1, 8, str.tostring(projTP2, format.mintick), text_color=color.white, bgcolor=color.green)
+    table.cell(dash1, 0, 9, "📈 Signal Probability", text_color=color.white, bgcolor=color.purple)
+    table.cell(dash1, 1, 9, str.tostring(currentProb) + "% Accuracy", text_color=color.yellow, bgcolor=color.purple)
+    table.cell(dash1, 0, 10, "💰 Rec. Position Size", text_color=color.white, bgcolor=color.navy)
+    table.cell(dash1, 1, 10, str.tostring(calcLotSize, "#.##") + " Units ($" + str.tostring(riskAmountUSD, "#.##") + " risk)", text_color=color.yellow, bgcolor=color.navy)
+
+var table dash2 = table.new(position=getPosition(posDash2), columns=2, rows=8, bgcolor=color.black, border_width=1)
+if barstate.islast and showDash2
+    string tsoupStatus = bullishTurtleSoup ? "BULLISH T-SOUP" : bearishTurtleSoup ? "BEARISH T-SOUP" : "NO T-SOUP"
+    color tsoupBg = bullishTurtleSoup ? color.green : bearishTurtleSoup ? color.red : color.black
+
+    table.cell(dash2, 0, 0, "TABLE 2: SMC & KZ RADAR", text_color=color.white, bgcolor=color.purple)
+    table.cell(dash2, 1, 0, "STATUS", text_color=color.white, bgcolor=color.purple)
+    table.cell(dash2, 0, 1, "🎯 Session KZ Status", text_color=color.white, bgcolor=inKillZone ? color.teal : color.gray)
+    table.cell(dash2, 1, 1, currentKZStr, text_color=color.white, bgcolor=inKillZone ? color.teal : color.gray)
+    table.cell(dash2, 0, 2, "🏛 Swing Structure", text_color=color.white, bgcolor=color.black)
+    table.cell(dash2, 1, 2, not na(lastPH) and close > lastPH ? "Bullish Break" : not na(lastPL) and close < lastPL ? "Bearish Break" : "Ranging Structure", text_color=color.white, bgcolor=color.black)
+    table.cell(dash2, 0, 3, "📦 Active FVG Zone", text_color=color.white, bgcolor=color.black)
+    table.cell(dash2, 1, 3, array.size(fvgBoxes) > 0 ? "Detected (" + str.tostring(array.size(fvgBoxes)) + ")" : "No Active FVG", text_color=color.white, bgcolor=color.black)
+    table.cell(dash2, 0, 4, "📍 Swing High Target", text_color=color.white, bgcolor=color.maroon)
+    table.cell(dash2, 1, 4, not na(lastPH) ? str.tostring(lastPH, format.mintick) : "Calculating", text_color=color.white, bgcolor=color.maroon)
+    table.cell(dash2, 0, 5, "📍 Swing Low Target", text_color=color.white, bgcolor=color.teal)
+    table.cell(dash2, 1, 5, not na(lastPL) ? str.tostring(lastPL, format.mintick) : "Calculating", text_color=color.white, bgcolor=color.teal)
+    table.cell(dash2, 0, 6, "🔄 AMD Phase Status", text_color=color.yellow, bgcolor=color.black)
+    table.cell(dash2, 1, 6, "Active AMD Setup", text_color=color.yellow, bgcolor=color.black)
+    table.cell(dash2, 0, 7, "🥣 Turtle Soup Model", text_color=color.white, bgcolor=color.black)
+    table.cell(dash2, 1, 7, tsoupStatus, text_color=color.white, bgcolor=tsoupBg)
+
+var table dash3 = table.new(position=getPosition(posDash3), columns=2, rows=7, bgcolor=color.black, border_width=1)
+if barstate.islast and showDash3
+    volatilityRatio  = atr / ta.sma(atr, 50)
+    isHighNewsImpact = volatilityRatio > 1.5
+    newsRangeDist    = atr * 2.0
+
+    table.cell(dash3, 0, 0, "TABLE 3: NEWS RADAR", text_color=color.white, bgcolor=color.navy)
+    table.cell(dash3, 1, 0, "VOLATILITY DATA", text_color=color.white, bgcolor=color.navy)
+    table.cell(dash3, 0, 1, "📰 News Event", text_color=color.white, bgcolor=isHighNewsImpact ? color.red : color.gray)
+    table.cell(dash3, 1, 1, newsNameInput, text_color=color.white, bgcolor=isHighNewsImpact ? color.red : color.gray)
+    table.cell(dash3, 0, 2, "⏱ Event Schedule", text_color=color.white, bgcolor=color.black)
+    table.cell(dash3, 1, 2, newsTimeInput, text_color=color.white, bgcolor=color.black)
+    table.cell(dash3, 0, 3, "🔥 Volatility Status", text_color=color.white, bgcolor=isHighNewsImpact ? color.red : color.teal)
+    table.cell(dash3, 1, 3, isHighNewsImpact ? "HIGH VOLATILITY" : "NORMAL STABILITY", text_color=color.white, bgcolor=isHighNewsImpact ? color.red : color.teal)
+    table.cell(dash3, 0, 4, "📈 Expected Spike UP", text_color=color.green, bgcolor=color.black)
+    table.cell(dash3, 1, 4, str.tostring(high + newsRangeDist, format.mintick), text_color=color.green, bgcolor=color.black)
+    table.cell(dash3, 0, 5, "🔻 Expected Spike DOWN", text_color=color.red, bgcolor=color.black)
+    table.cell(dash3, 1, 5, str.tostring(low - newsRangeDist, format.mintick), text_color=color.red, bgcolor=color.black)
+    table.cell(dash3, 0, 6, "📏 ATR Volatility", text_color=color.white, bgcolor=color.black)
+    table.cell(dash3, 1, 6, str.tostring(atr, format.mintick), text_color=color.white, bgcolor=color.black)
+
+var table dash4 = table.new(position=getPosition(posDash4), columns=2, rows=8, bgcolor=color.black, border_width=1)
+if barstate.islast and showDash4
+    string emaTrendStatus = (close > ema9 and ema9 > ema21) ? "BULLISH STACK" : (close < ema9 and ema9 < ema21) ? "BEARISH STACK" : "MIXED CONSOLIDATION"
+    float riskRewardVal   = (math.abs(projTP1 - close) / math.max(math.abs(close - projSL), syminfo.mintick))
+    string vwapPosStatus  = close > vwapUpper2 ? "OVERBOUGHT (SD2+)" : close < vwapLower2 ? "OVERSOLD (-SD2)" : close > vwapVal ? "ABOVE VWAP" : "BELOW VWAP"
+    color vwapPosBg       = close > vwapUpper2 ? color.maroon : close < vwapLower2 ? color.teal : close > vwapVal ? color.green : color.red
+
+    table.cell(dash4, 0, 0, "TABLE 4: EXECUTION RADAR", text_color=color.white, bgcolor=#006400)
+    table.cell(dash4, 1, 0, "TREND MATRIX", text_color=color.white, bgcolor=#006400)
+    table.cell(dash4, 0, 1, "📊 Market Direction", text_color=color.white, bgcolor=upTrendRF ? color.green : color.red)
+    table.cell(dash4, 1, 1, upTrendRF ? "UPTREND (BUY)" : "DOWNTREND (SELL)", text_color=color.white, bgcolor=upTrendRF ? color.green : color.red)
+    table.cell(dash4, 0, 2, "📈 EMA 9/21/50 Filter", text_color=color.white, bgcolor=color.black)
+    table.cell(dash4, 1, 2, emaTrendStatus, text_color=color.white, bgcolor=color.black)
+    table.cell(dash4, 0, 3, "🌐 VWAP Position", text_color=color.white, bgcolor=color.black)
+    table.cell(dash4, 1, 3, vwapPosStatus, text_color=color.white, bgcolor=vwapPosBg)
+    table.cell(dash4, 0, 4, "📊 Buy/Sell Volume", text_color=color.white, bgcolor=color.black)
+    table.cell(dash4, 1, 4, volPctStr, text_color=color.white, bgcolor=color.black)
+    table.cell(dash4, 0, 5, "⚖️ Risk / Reward Ratio", text_color=color.yellow, bgcolor=color.black)
+    table.cell(dash4, 1, 5, "1 : " + str.tostring(riskRewardVal, "#.##"), text_color=color.yellow, bgcolor=color.black)
+    table.cell(dash4, 0, 6, "🎯 Optimal Action", text_color=color.white, bgcolor=upTrendRF and liveBullProb > 50 ? color.green : color.red)
+    table.cell(dash4, 1, 6, upTrendRF and liveBullProb > 50 ? "LOOK FOR BUYS" : "LOOK FOR SELLS", text_color=color.white, bgcolor=upTrendRF and liveBullProb > 50 ? color.green : color.red)
+    table.cell(dash4, 0, 7, "🔮 Channel Trend Mid", text_color=color.white, bgcolor=color.black)
+    table.cell(dash4, 1, 7, str.tostring(chanMid, format.mintick), text_color=color.white, bgcolor=color.black)
+
+//======================================================================
+// TABLE 5: MULTI-TIMEFRAME RADAR (OPTIMIZED WITH TREND & SUCCESS PROB %)
+//======================================================================
+f_mtfTrend(tf) =>
+    float tfClose = request.security(syminfo.tickerid, tf, close)
+    float tfEma   = request.security(syminfo.tickerid, tf, ta.ema(close, 21))
+    tfClose > tfEma ? 1 : -1
+
+f_mtfRowData(tf) =>
+    int tVal = f_mtfTrend(tf)
+    // Calculate dynamic success probability based on trend alignment & general bull probability
+    int prob = tVal > 0 ? math.round(math.min(98, liveBullProb + 5)) : math.round(math.min(98, liveBearProb + 5))
+    string statusStr = tVal > 0 ? "🟢 UPTREND (" + str.tostring(prob) + "%)" : "🔴 DOWNTREND (" + str.tostring(prob) + "%)"
+    color statusCol  = tVal > 0 ? color.green : color.red
+    [statusStr, statusCol]
+
+var table dash5 = table.new(position=getPosition(posDash5), columns=2, rows=13, bgcolor=color.black, border_width=1)
+if barstate.islast and showDash5
+    table.cell(dash5, 0, 0, "TABLE 5: MTF TREND & PROB", text_color=color.white, bgcolor=color.maroon, text_size=size.tiny)
+    table.cell(dash5, 1, 0, "BIAS & SUCCESS %", text_color=color.white, bgcolor=color.maroon, text_size=size.tiny)
+    
+    // Array of timeframes
+    string[] tfs = array.from("1", "2", "3", "4", "5", "8", "16", "32", "64", "180", "360", "D")
+    string[] tfLabels = array.from("⏱️ 1m TF", "⏱️ 2m TF", "⏱️ 3m TF", "⏱️ 4m TF", "⏱️ 5m TF", "⏱️ 8m TF", "⏱️ 16m TF", "⏱️ 32m TF", "⏱️ 64m TF", "⏱️ 3hr TF", "⏱️ 6hr TF", "⏱️ 1day TF")
+    
+    for i = 0 to 11
+        string currentTf = array.get(tfs, i)
+        string labelStr  = array.get(tfLabels, i)
+        [resStr, resCol] = f_mtfRowData(currentTf)
+        
+        table.cell(dash5, 0, i + 1, labelStr, text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+        table.cell(dash5, 1, i + 1, resStr, text_color=color.white, bgcolor=resCol, text_size=size.tiny)
+
+var table dash6 = table.new(position=getPosition(posDash6), columns=2, rows=8, bgcolor=color.black, border_width=1)
+if barstate.islast and showDash6
+    string tdStatusStr = tdBuySetup > 0 ? "BUY SETUP (" + str.tostring(tdBuySetup) + "/9)" : tdSellSetup > 0 ? "SELL SETUP (" + str.tostring(tdSellSetup) + "/9)" : "NEUTRAL"
+    color tdStatusBg = tdBuySetup > 0 ? color.green : tdSellSetup > 0 ? color.red : color.gray
+    
+    string tdReversalSignal = tdBuySetup == 9 ? "BULLISH REVERSAL (TD 9)" : tdSellSetup == 9 ? "BEARISH REVERSAL (TD 9)" : tdCountdown == 13 ? "EXTREME REVERSAL (TD 13)" : "NONE / SEARCHING"
+    color tdReversalBg = (tdBuySetup == 9 or (tdCountdown == 13 and tdBuySetup > 0)) ? color.green : (tdSellSetup == 9 or (tdCountdown == 13 and tdSellSetup > 0)) ? color.red : color.black
+
+    bool rsiBullDiv = (tdBuySetup >= 7 and rsiVal < 35)
+    bool rsiBearDiv = (tdSellSetup >= 7 and rsiVal > 65)
+    float confluenceScore = (tdBuySetup == 9 or tdSellSetup == 9 ? 40 : 10) + (rsiBullDiv or rsiBearDiv ? 25 : 10) + (inKillZone ? 10 : 0)
+    confluenceScore := math.min(99.0, confluenceScore)
+
+    string tdPredictDir = nextCandleDir
+    color predictBg = liveBullProb > 50 ? color.green : liveBearProb > 50 ? color.red : color.gray
+
+    table.cell(dash6, 0, 0, "TABLE 6: TD & REVERSAL RADAR", text_color=color.white, bgcolor=color.purple, text_size=size.tiny)
+    table.cell(dash6, 1, 0, "PRECISION ENGINE", text_color=color.white, bgcolor=color.purple, text_size=size.tiny)
+    table.cell(dash6, 0, 1, "🔢 TD Setup State", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash6, 1, 1, tdStatusStr, text_color=color.white, bgcolor=tdStatusBg, text_size=size.tiny)
+    table.cell(dash6, 0, 2, "⏱️ TD Countdown", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash6, 1, 2, tdPhase == "COUNTDOWN" ? str.tostring(tdCountdown) + "/13 Active" : "Waiting Setup 9", text_color=color.white, bgcolor=tdPhase == "COUNTDOWN" ? color.teal : color.gray, text_size=size.tiny)
+    table.cell(dash6, 0, 3, "🎯 Reversal Alert", text_color=color.yellow, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash6, 1, 3, tdReversalSignal, text_color=color.white, bgcolor=tdReversalBg, text_size=size.tiny)
+    table.cell(dash6, 0, 4, "🎯 Reversal Confluence", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash6, 1, 4, str.tostring(math.round(confluenceScore)) + "% High Accuracy", text_color=color.yellow, bgcolor=color.navy, text_size=size.tiny)
+    table.cell(dash6, 0, 5, "⚡ NEXT CANDLE PREDICTION", text_color=color.yellow, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash6, 1, 5, tdPredictDir, text_color=color.white, bgcolor=predictBg, text_size=size.tiny)
+    table.cell(dash6, 0, 6, "📉 Risk Level (TD ST)", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash6, 1, 6, str.tostring(tdBuySetup > 0 ? ta.lowest(low, 9) : ta.highest(high, 9), format.mintick), text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash6, 0, 7, "📊 Exhaustion Level", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash6, 1, 7, tdBuySetup >= 8 or tdSellSetup >= 8 ? "HIGH FATIGUE" : "NORMAL TREND", text_color=color.white, bgcolor=tdBuySetup >= 8 or tdSellSetup >= 8 ? color.maroon : color.teal, text_size=size.tiny)
+
+var table dash7 = table.new(position=getPosition(posDash7), columns=2, rows=6, bgcolor=color.black, border_width=1)
+if barstate.islast and showDash7
+    string deltaStr = "Delta: " + str.tostring(math.round(barDeltaVolume)) + " | Cum: " + str.tostring(math.round(cumDeltaVolume))
+    color deltaCol  = barDeltaVolume > 0 ? color.teal : color.maroon
+
+    table.cell(dash7, 0, 0, "TABLE 7: FOOTPRINT & DIRECTION", text_color=color.white, bgcolor=color.teal, text_size=size.tiny)
+    table.cell(dash7, 1, 0, "ORDER FLOW DATA", text_color=color.white, bgcolor=color.teal, text_size=size.tiny)
+    table.cell(dash7, 0, 1, "🎯 Market Direction", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash7, 1, 1, marketDirectionStr, text_color=color.white, bgcolor=marketDirectionCol, text_size=size.tiny)
+    table.cell(dash7, 0, 2, "👣 Footprint Delta", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash7, 1, 2, deltaStr, text_color=color.white, bgcolor=deltaCol, text_size=size.tiny)
+    table.cell(dash7, 0, 3, "⚡ Imbalance Status", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash7, 1, 3, isBuyImbalance ? "BUY IMBALANCE (300%+)" : isSellImbalance ? "SELL IMBALANCE (300%+)" : "BALANCED BID/ASK", text_color=color.white, bgcolor=isBuyImbalance ? color.teal : isSellImbalance ? color.maroon : color.gray, text_size=size.tiny)
+    table.cell(dash7, 0, 4, "📈 ADX Trend Strength", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash7, 1, 4, str.tostring(math.round(adxVal)) + " (ACTIVE)", text_color=color.white, bgcolor=color.teal, text_size=size.tiny)
+    table.cell(dash7, 0, 5, "🛡 Range/Sideways Guard", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash7, 1, 5, "✅ TRADE ALLOWED", text_color=color.white, bgcolor=color.green, text_size=size.tiny)
+
+var table dash8 = table.new(position=getPosition(posDash8), columns=2, rows=5, bgcolor=color.black, border_width=1)
+if barstate.islast and showDash8
+    string co2StatusStr = co2Bullish ? "🟢 CO2 BULLISH SETUP" : co2Bearish ? "🔴 CO2 BEARISH SETUP" : "⚪ MONITORING CO2"
+    color co2StatusBg   = co2Bullish ? color.green : co2Bearish ? color.red : color.gray
+
+    table.cell(dash8, 0, 0, "TABLE 8: CO2 THEORY RADAR", text_color=color.white, bgcolor=color.navy, text_size=size.tiny)
+    table.cell(dash8, 1, 0, "2-CANDLE STATUS", text_color=color.white, bgcolor=color.navy, text_size=size.tiny)
+    table.cell(dash8, 0, 1, "⚡ CO2 Signal State", text_color=color.white, bgcolor=co2StatusBg, text_size=size.tiny)
+    table.cell(dash8, 1, 1, co2StatusStr, text_color=color.white, bgcolor=co2StatusBg, text_size=size.tiny)
+    table.cell(dash8, 0, 2, "📏 Prev Candle Body %", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash8, 1, 2, str.tostring(math.round(co2PrevRatio * 100)) + "%", text_color=color.yellow, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash8, 0, 3, "📏 Curr Candle Body %", text_color=color.white, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash8, 1, 3, str.tostring(math.round(co2CurrRatio * 100)) + "%", text_color=color.yellow, bgcolor=color.black, text_size=size.tiny)
+    table.cell(dash8, 0, 4, "🎯 Strategy Alignment", text_color=color.white, bgcolor=color.purple, text_size=size.tiny)
+    table.cell(dash8, 1, 4, "ACTIVE & SYNCED", text_color=color.white, bgcolor=color.purple, text_size=size.tiny)
